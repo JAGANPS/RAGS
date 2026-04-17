@@ -76,7 +76,7 @@ Built for **Flexera** domain knowledge: SAM (Software Asset Management), ITAM (I
 
 1. **Clone and navigate to the project**:
 ```bash
-cd /Users/jsrilakshmi/Downloads/Demo-RAG
+cd /Users/Downloads/Demo-RAG
 ```
 
 2. **Create virtual environment**:

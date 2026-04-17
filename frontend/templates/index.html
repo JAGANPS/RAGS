@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-RAG System | Flexera Knowledge Base</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/tabs.css">
+    <!-- Vis.js for graph visualization -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">&#9881;</div>
+                <span class="logo-text">Multi-RAG System</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" id="compareBtn">
+                    <span>Compare</span>
+                </button>
+                <button class="btn btn-primary" id="uploadBtn">
+                    <span>&#8593;</span> Upload Documents
+                </button>
+                <button class="btn-icon tooltip" data-tooltip="System Stats" id="statsBtn">
+                    &#9776;
+                </button>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-navigation">
+            <button class="tab-btn active" data-tab="chat">&#128172; Chat</button>
+            <button class="tab-btn" data-tab="standard-rag">&#9673; Standard RAG</button>
+            <button class="tab-btn" data-tab="vectorless-rag">&#9670; Vectorless RAG</button>
+            <button class="tab-btn" data-tab="agentic-rag">&#9734; Agentic RAG</button>
+            <button class="tab-btn" data-tab="agent-overview">&#129302; Agent Overview</button>
+            <button class="tab-btn" data-tab="graph-view">&#128200; Graph View</button>
+            <button class="tab-btn" data-tab="api-docs">&#128214; API Docs</button>
+        </nav>
+
+        <!-- Tab Contents -->
+
+        <!-- Chat Tab -->
+        <div class="tab-content active" id="tab-chat">
+            <main class="main-content">
+                <!-- Left Sidebar - RAG Selection -->
+                <aside class="sidebar">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">RAG Engine</span>
+                        </div>
+                        <div class="panel-content">
+                            <div class="rag-selector">
+                                <div class="rag-option active" data-rag="auto">
+                                    <div class="rag-icon" style="background: var(--gradient-primary);">&#9733;</div>
+                                    <div class="rag-info">
+                                        <h4>Auto Select</h4>
+                                        <p>Let AI choose the best</p>
+                                    </div>
+                                </div>
+                                <div class="rag-option standard" data-rag="standard">
+                                    <div class="rag-icon">&#9673;</div>
+                                    <div class="rag-info">
+                                        <h4>Standard RAG</h4>
+                                        <p>Vector similarity search</p>
+                                    </div>
+                                </div>
+                                <div class="rag-option vectorless" data-rag="vectorless">
+                                    <div class="rag-icon">&#9670;</div>
+                                    <div class="rag-info">
+                                        <h4>Vectorless RAG</h4>
+                                        <p>Reasoning-based retrieval</p>
+                                    </div>
+                                </div>
+                                <div class="rag-option agentic" data-rag="agentic">
+                                    <div class="rag-icon">&#9734;</div>
+                                    <div class="rag-info">
+                                        <h4>Agentic RAG</h4>
+                                        <p>Multi-agent processing</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Category Filter</span>
+                        </div>
+                        <div class="panel-content">
+                            <div class="category-filter">
+                                <button class="category-btn active" data-category="all">All</button>
+                                <button class="category-btn" data-category="sam">SAM</button>
+                                <button class="category-btn" data-category="itam">ITAM</button>
+                                <button class="category-btn" data-category="itv">ITV</button>
+                                <button class="category-btn" data-category="sre">SRE</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Quick Stats</span>
+                        </div>
+                        <div class="panel-content">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="docsCount">0</div>
+                                    <div class="stat-label">Documents</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="queriesCount">0</div>
+                                    <div class="stat-label">Queries</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Center - Chat Area -->
+                <section class="chat-area panel">
+                    <div class="messages-container" id="messagesContainer">
+                        <!-- Messages will be inserted here -->
+                    </div>
+                    <div class="input-area">
+                        <div class="input-wrapper">
+                            <textarea
+                                class="query-input"
+                                id="queryInput"
+                                placeholder="Ask about SAM, ITAM, ITV, or SRE..."
+                                rows="1"
+                            ></textarea>
+                            <button class="send-btn" id="sendBtn">&#10148;</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Right Sidebar - Metrics -->
+                <aside class="metrics-panel">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Latency Comparison</span>
+                        </div>
+                        <div class="panel-content">
+                            <div class="latency-chart">
+                                <div class="latency-bars">
+                                    <div class="latency-bar-wrapper">
+                                        <span class="latency-value" id="latency-standard">--</span>
+                                        <div class="latency-bar standard" style="height: 20px;"></div>
+                                        <span class="latency-label">Standard</span>
+                                    </div>
+                                    <div class="latency-bar-wrapper">
+                                        <span class="latency-value" id="latency-vectorless">--</span>
+                                        <div class="latency-bar vectorless" style="height: 20px;"></div>
+                                        <span class="latency-label">Vectorless</span>
+                                    </div>
+                                    <div class="latency-bar-wrapper">
+                                        <span class="latency-value" id="latency-agentic">--</span>
+                                        <div class="latency-bar agentic" style="height: 20px;"></div>
+                                        <span class="latency-label">Agentic</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Retrieved Sources</span>
+                        </div>
+                        <div class="panel-content">
+                            <div class="sources-list" id="sourcesList">
+                                <p style="color: var(--text-muted); font-size: 0.8125rem; text-align: center;">
+                                    Sources will appear here after your first query
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">System Status</span>
+                        </div>
+                        <div class="panel-content">
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.8125rem; color: var(--text-secondary);">Standard RAG</span>
+                                    <span style="width: 8px; height: 8px; background: var(--secondary); border-radius: 50%;"></span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.8125rem; color: var(--text-secondary);">Vectorless RAG</span>
+                                    <span style="width: 8px; height: 8px; background: var(--secondary); border-radius: 50%;"></span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.8125rem; color: var(--text-secondary);">Agentic RAG</span>
+                                    <span style="width: 8px; height: 8px; background: var(--secondary); border-radius: 50%;"></span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border);">
+                                    <span style="font-size: 0.75rem; color: var(--text-muted);">Model</span>
+                                    <span style="font-size: 0.75rem; color: var(--primary-light);">Claude Sonnet 4</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </main>
+        </div>
+
+        <!-- Standard RAG Tab -->
+        <div class="tab-content" id="tab-standard-rag">
+            <div class="rag-explanation-grid">
+                <div class="rag-card standard" style="grid-column: span 2;">
+                    <div class="rag-card-header">
+                        <div class="rag-card-icon">&#9673;</div>
+                        <h3 class="rag-card-title">Standard RAG (Vector-Based)</h3>
+                        <p class="rag-card-subtitle">Traditional Retrieval-Augmented Generation using embedding similarity</p>
+                    </div>
+                    <div class="rag-card-body">
+                        <div class="rag-card-section">
+                            <h5>How It Works</h5>
+                            <div class="mini-architecture">
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  Documents  │───▶│  Chunking   │───▶│  Embedding  │───▶│  ChromaDB   │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                                                │
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐          │
+│   Response  │◀───│   Claude    │◀───│  Top-K      │◀─────────┘
+└─────────────┘    └─────────────┘    │  Retrieval  │
+                                      └─────────────┘
+                            </div>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Key Components</h5>
+                            <ul>
+                                <li><strong>Document Chunking:</strong> Splits documents into 512-token overlapping segments</li>
+                                <li><strong>Embeddings:</strong> Uses sentence-transformers/all-MiniLM-L6-v2 (384 dimensions)</li>
+                                <li><strong>Vector Store:</strong> ChromaDB with cosine similarity search</li>
+                                <li><strong>Retrieval:</strong> Returns top-K most similar chunks</li>
+                            </ul>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Performance Metrics</h5>
+                            <div class="rag-metrics">
+                                <div class="metric-badge">
+                                    <span class="label">Speed:</span>
+                                    <span class="value good">~500ms</span>
+                                </div>
+                                <div class="metric-badge">
+                                    <span class="label">Accuracy:</span>
+                                    <span class="value medium">Good</span>
+                                </div>
+                                <div class="metric-badge">
+                                    <span class="label">Best For:</span>
+                                    <span class="value">Semantic Search</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Strengths</h5>
+                            <ul>
+                                <li>Fast retrieval with pre-computed embeddings</li>
+                                <li>Works well for semantic similarity queries</li>
+                                <li>Proven, well-understood approach</li>
+                                <li>Low latency for simple queries</li>
+                            </ul>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Limitations</h5>
+                            <ul>
+                                <li>Similarity ≠ Relevance (can retrieve semantically similar but irrelevant content)</li>
+                                <li>Struggles with structured document navigation</li>
+                                <li>Cannot handle cross-references ("see Appendix G")</li>
+                                <li>Fixed chunk boundaries may split important context</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" style="padding: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem;">Live Vector Index Status</h4>
+                    <div id="standard-rag-stats">
+                        <div class="stat-card" style="margin-bottom: 0.5rem;">
+                            <div class="stat-value" id="vector-doc-count">--</div>
+                            <div class="stat-label">Indexed Chunks</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">384</div>
+                            <div class="stat-label">Vector Dimensions</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vectorless RAG Tab -->
+        <div class="tab-content" id="tab-vectorless-rag">
+            <div class="rag-explanation-grid">
+                <div class="rag-card vectorless" style="grid-column: span 2;">
+                    <div class="rag-card-header">
+                        <div class="rag-card-icon">&#9670;</div>
+                        <h3 class="rag-card-title">Vectorless RAG (Reasoning-Based)</h3>
+                        <p class="rag-card-subtitle">PageIndex-inspired approach using hierarchical document structure</p>
+                    </div>
+                    <div class="rag-card-body">
+                        <div class="rag-card-section">
+                            <h5>How It Works</h5>
+                            <div class="mini-architecture">
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  Documents  │───▶│  Build ToC  │───▶│  JSON Tree  │
+└─────────────┘    │    Tree     │    │   Index     │
+                   └─────────────┘    └─────────────┘
+                                            │
+         ┌──────────────────────────────────┘
+         ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  LLM Reads  │───▶│   Reasons   │───▶│  Navigates  │
+│    ToC      │    │   "Where    │    │  to Section │
+└─────────────┘    │   to look?" │    └─────────────┘
+                   └─────────────┘           │
+                                            ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Response  │◀───│   Claude    │◀───│  Extracts   │
+└─────────────┘    └─────────────┘    │   Content   │
+                                      └─────────────┘
+                            </div>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Key Innovation: No Embeddings Required</h5>
+                            <p>Instead of converting documents to vectors, Vectorless RAG builds a hierarchical Table of Contents (ToC) structure. The LLM then <strong>reasons</strong> about which sections are relevant, mimicking how a human expert would navigate a document.</p>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Performance Metrics</h5>
+                            <div class="rag-metrics">
+                                <div class="metric-badge">
+                                    <span class="label">Speed:</span>
+                                    <span class="value medium">~2-3s</span>
+                                </div>
+                                <div class="metric-badge">
+                                    <span class="label">Accuracy:</span>
+                                    <span class="value good">98.7% (FinanceBench)</span>
+                                </div>
+                                <div class="metric-badge">
+                                    <span class="label">Best For:</span>
+                                    <span class="value">Structured Docs</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Strengths</h5>
+                            <ul>
+                                <li>Preserves document structure and context</li>
+                                <li>Handles cross-references naturally</li>
+                                <li>98.7% accuracy on financial document benchmarks</li>
+                                <li>Explainable retrieval (shows reasoning)</li>
+                                <li>No embedding storage overhead</li>
+                            </ul>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Limitations</h5>
+                            <ul>
+                                <li>Higher latency due to LLM reasoning steps</li>
+                                <li>Requires documents with clear structure</li>
+                                <li>More API calls (higher cost)</li>
+                                <li>Less effective for unstructured content</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" style="padding: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem;">Document Tree Structure</h4>
+                    <div class="tree-view" id="vectorless-tree">
+                        <p style="color: var(--text-muted); font-size: 0.8125rem;">
+                            Document tree will appear here after indexing
+                        </p>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 1rem; width: 100%;" onclick="loadDocumentTree()">
+                        Refresh Tree
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agentic RAG Tab -->
+        <div class="tab-content" id="tab-agentic-rag">
+            <div class="rag-explanation-grid">
+                <div class="rag-card agentic" style="grid-column: span 2;">
+                    <div class="rag-card-header">
+                        <div class="rag-card-icon">&#9734;</div>
+                        <h3 class="rag-card-title">Agentic RAG (Multi-Agent)</h3>
+                        <p class="rag-card-subtitle">Intelligent orchestration with planning, routing, synthesis, and reflection</p>
+                    </div>
+                    <div class="rag-card-body">
+                        <div class="rag-card-section">
+                            <h5>How It Works</h5>
+                            <div class="mini-architecture">
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│    Query    │───▶│   ROUTER    │───▶│  Complexity │
+└─────────────┘    │   AGENT     │    │  Analysis   │
+                   └─────────────┘    └─────────────┘
+                         │                   │
+         ┌───────────────┼───────────────┐   │
+         ▼               ▼               ▼   │
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│  Standard   │ │  Vectorless │ │    Both     │◀┘
+│    RAG      │ │    RAG      │ │  (Hybrid)   │
+└─────────────┘ └─────────────┘ └─────────────┘
+         │               │               │
+         └───────────────┼───────────────┘
+                         ▼
+              ┌─────────────────┐
+              │   SYNTHESIS     │
+              │     AGENT       │
+              └─────────────────┘
+                         │
+                         ▼
+              ┌─────────────────┐
+              │   REFLECTION    │
+              │     AGENT       │
+              └─────────────────┘
+                         │
+                         ▼
+              ┌─────────────────┐
+              │    Response     │
+              └─────────────────┘
+                            </div>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Agent Roles</h5>
+                            <ul>
+                                <li><strong>Router Agent:</strong> Analyzes query complexity, chooses retrieval strategy</li>
+                                <li><strong>Retrieval Agents:</strong> Execute Standard and/or Vectorless retrieval</li>
+                                <li><strong>Synthesis Agent:</strong> Combines results from multiple sources</li>
+                                <li><strong>Reflection Agent:</strong> Validates answer quality, identifies gaps</li>
+                            </ul>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Performance Metrics</h5>
+                            <div class="rag-metrics">
+                                <div class="metric-badge">
+                                    <span class="label">Speed:</span>
+                                    <span class="value slow">~4-6s</span>
+                                </div>
+                                <div class="metric-badge">
+                                    <span class="label">Accuracy:</span>
+                                    <span class="value good">Highest</span>
+                                </div>
+                                <div class="metric-badge">
+                                    <span class="label">Best For:</span>
+                                    <span class="value">Complex Queries</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Strengths</h5>
+                            <ul>
+                                <li>Handles multi-hop reasoning queries</li>
+                                <li>Self-correcting with reflection</li>
+                                <li>Chooses optimal retrieval strategy per query</li>
+                                <li>Can decompose complex queries into sub-queries</li>
+                                <li>Highest overall accuracy</li>
+                            </ul>
+                        </div>
+
+                        <div class="rag-card-section">
+                            <h5>Limitations</h5>
+                            <ul>
+                                <li>Highest latency (multiple LLM calls)</li>
+                                <li>Most expensive (API costs)</li>
+                                <li>May be overkill for simple queries</li>
+                                <li>More complex to debug</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" style="padding: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem;">Live Agent Workflow</h4>
+                    <div id="agent-workflow-display">
+                        <div class="workflow-step" id="step-route">
+                            <div class="workflow-step-number">1</div>
+                            <div class="workflow-step-content">
+                                <h5>Query Routing</h5>
+                                <p>Analyzing complexity and strategy</p>
+                            </div>
+                        </div>
+                        <div class="workflow-step" id="step-retrieve">
+                            <div class="workflow-step-number">2</div>
+                            <div class="workflow-step-content">
+                                <h5>Retrieval</h5>
+                                <p>Executing selected strategy</p>
+                            </div>
+                        </div>
+                        <div class="workflow-step" id="step-synthesize">
+                            <div class="workflow-step-number">3</div>
+                            <div class="workflow-step-content">
+                                <h5>Synthesis</h5>
+                                <p>Combining retrieved information</p>
+                            </div>
+                        </div>
+                        <div class="workflow-step" id="step-reflect">
+                            <div class="workflow-step-number">4</div>
+                            <div class="workflow-step-content">
+                                <h5>Reflection</h5>
+                                <p>Validating and improving answer</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Overview Tab -->
+        <div class="tab-content" id="tab-agent-overview">
+            <div class="agent-overview">
+                <h2 style="margin-bottom: 1.5rem;">Unified Agent Architecture</h2>
+
+                <div class="agent-flow">
+                    <div class="agent-node query">
+                        <div class="agent-node-icon">&#128172;</div>
+                        <span class="agent-node-label">User Query</span>
+                    </div>
+                    <span class="flow-arrow">&#10132;</span>
+                    <div class="agent-node router">
+                        <div class="agent-node-icon">&#128268;</div>
+                        <span class="agent-node-label">Router Agent</span>
+                    </div>
+                    <span class="flow-arrow">&#10132;</span>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div class="agent-node standard">
+                            <div class="agent-node-icon">&#9673;</div>
+                            <span class="agent-node-label">Standard RAG</span>
+                        </div>
+                        <div class="agent-node vectorless">
+                            <div class="agent-node-icon">&#9670;</div>
+                            <span class="agent-node-label">Vectorless RAG</span>
+                        </div>
+                    </div>
+                    <span class="flow-arrow">&#10132;</span>
+                    <div class="agent-node synthesis">
+                        <div class="agent-node-icon">&#128161;</div>
+                        <span class="agent-node-label">Synthesis Agent</span>
+                    </div>
+                    <span class="flow-arrow">&#10132;</span>
+                    <div class="agent-node reflection">
+                        <div class="agent-node-icon">&#128269;</div>
+                        <span class="agent-node-label">Reflection Agent</span>
+                    </div>
+                    <span class="flow-arrow">&#10132;</span>
+                    <div class="agent-node response">
+                        <div class="agent-node-icon">&#9989;</div>
+                        <span class="agent-node-label">Response</span>
+                    </div>
+                </div>
+
+                <h3 style="margin: 2rem 0 1rem;">Agent Capabilities</h3>
+                <div class="agent-capabilities">
+                    <div class="capability-card">
+                        <h4>&#128268; Query Router</h4>
+                        <p>Analyzes incoming queries to determine complexity (simple/moderate/complex) and selects the optimal retrieval strategy (vector/reasoning/hybrid). Can decompose complex queries into sub-queries.</p>
+                    </div>
+                    <div class="capability-card">
+                        <h4>&#128161; Synthesis Agent</h4>
+                        <p>Combines information from multiple retrieval sources into a coherent, well-structured answer. Cites sources and indicates confidence levels.</p>
+                    </div>
+                    <div class="capability-card">
+                        <h4>&#128269; Reflection Agent</h4>
+                        <p>Reviews generated answers for accuracy, completeness, and relevance. Identifies gaps and suggests improvements. Can trigger additional retrieval if needed.</p>
+                    </div>
+                    <div class="capability-card">
+                        <h4>&#9881; Powered by Agno Framework</h4>
+                        <p>Built on the Agno agent framework with AWS Bedrock integration. Uses Claude Sonnet 4 (us.anthropic.claude-sonnet-4-6) for all agent operations.</p>
+                    </div>
+                </div>
+
+                <div class="live-demo">
+                    <h3><span class="demo-status"></span> Decision Logic Example</h3>
+                    <div class="code-block">
+<span class="key">Query:</span> <span class="string">"What are the SAM best practices for audit preparation?"</span>
+
+<span class="key">Router Analysis:</span>
+  <span class="key">complexity:</span> <span class="string">"moderate"</span>
+  <span class="key">strategy:</span> <span class="string">"hybrid"</span>
+  <span class="key">reasoning:</span> <span class="string">"Query spans multiple concepts (SAM + audit + best practices).
+              Hybrid approach will get semantic matches AND structured navigation."</span>
+  <span class="key">sub_queries:</span> []
+  <span class="key">requires_iteration:</span> <span class="boolean">false</span>
+
+<span class="key">Retrieval:</span>
+  - Standard RAG: 3 chunks (relevance: 0.87, 0.82, 0.79)
+  - Vectorless RAG: 2 sections (audit_checklist.txt, sam_best_practices.txt)
+
+<span class="key">Synthesis:</span> Combined 5 sources into comprehensive answer
+
+<span class="key">Reflection:</span>
+  <span class="key">quality_score:</span> <span class="number">0.92</span>
+  <span class="key">is_complete:</span> <span class="boolean">true</span>
+  <span class="key">gaps_identified:</span> []
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph View Tab -->
+        <div class="tab-content" id="tab-graph-view">
+            <div style="padding: 1.5rem;">
+                <h2 style="margin-bottom: 1rem;">Document Knowledge Graph</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Visualize the hierarchical structure of indexed documents and their relationships.
+                </p>
+
+                <div class="graph-container" id="knowledge-graph">
+                    <div class="graph-controls">
+                        <button class="btn btn-secondary" onclick="graphManager.fitGraph()">Reset View</button>
+                        <button class="btn btn-secondary" onclick="graphManager.resetLayout()">Toggle Physics</button>
+                        <select id="graphFilter" class="btn btn-secondary">
+                            <option value="all">All Documents</option>
+                            <option value="sam">SAM Only</option>
+                            <option value="itam">ITAM Only</option>
+                            <option value="itv">ITV Only</option>
+                            <option value="sre">SRE Only</option>
+                        </select>
+                    </div>
+                    <div class="graph-legend">
+                        <div class="legend-item">
+                            <span class="legend-dot document"></span>
+                            <span>Document</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot section"></span>
+                            <span>Section</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot chunk"></span>
+                            <span>Chunk</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot query"></span>
+                            <span>Query (when active)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="node-info" id="node-info">
+                    <h4 id="nodeInfoTitle">Node Title</h4>
+                    <p id="nodeInfoType">Type: Document</p>
+                    <p id="nodeInfoContent">Content preview...</p>
+                </div>
+
+                <button class="btn btn-primary" style="margin-top: 1rem;" onclick="graphManager.initialize()">
+                    Load/Refresh Graph
+                </button>
+            </div>
+        </div>
+
+        <!-- API Docs Tab -->
+        <div class="tab-content" id="tab-api-docs">
+            <div class="api-docs">
+                <h2 style="margin-bottom: 0.5rem;">API Documentation</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    FastAPI Backend Endpoints - Base URL: <code>http://localhost:8000</code>
+                </p>
+
+                <div class="api-endpoint">
+                    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/api/query</span>
+                        <span class="api-description">Process a query using selected RAG engine</span>
+                    </div>
+                    <div class="api-endpoint-body">
+                        <div class="api-section">
+                            <h5>Request Body</h5>
+                            <div class="code-block">
+{
+  <span class="key">"query"</span>: <span class="string">"What are SAM best practices?"</span>,
+  <span class="key">"rag_type"</span>: <span class="string">"auto"</span>,  <span style="color: var(--text-muted);">// auto, standard, vectorless, agentic</span>
+  <span class="key">"category"</span>: <span class="string">"all"</span>,   <span style="color: var(--text-muted);">// all, sam, itam, itv, sre</span>
+  <span class="key">"top_k"</span>: <span class="number">5</span>,
+  <span class="key">"enable_reflection"</span>: <span class="boolean">true</span>
+}
+                            </div>
+                        </div>
+                        <div class="api-section">
+                            <h5>Response</h5>
+                            <div class="code-block">
+{
+  <span class="key">"success"</span>: <span class="boolean">true</span>,
+  <span class="key">"answer"</span>: <span class="string">"Based on the SAM best practices..."</span>,
+  <span class="key">"sources"</span>: [...],
+  <span class="key">"rag_type"</span>: <span class="string">"agentic_rag"</span>,
+  <span class="key">"latency"</span>: {
+    <span class="key">"retrieval_ms"</span>: <span class="number">523.2</span>,
+    <span class="key">"generation_ms"</span>: <span class="number">1234.5</span>,
+    <span class="key">"total_ms"</span>: <span class="number">2895.3</span>
+  }
+}
+                            </div>
+                        </div>
+                        <button class="btn btn-primary try-btn" onclick="tryEndpoint('/api/query', 'POST')">Try It</button>
+                    </div>
+                </div>
+
+                <div class="api-endpoint">
+                    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/api/compare</span>
+                        <span class="api-description">Compare all RAG engines side-by-side</span>
+                    </div>
+                    <div class="api-endpoint-body">
+                        <div class="api-section">
+                            <h5>Request Body</h5>
+                            <div class="code-block">
+{
+  <span class="key">"query"</span>: <span class="string">"Explain ITAM lifecycle management"</span>,
+  <span class="key">"top_k"</span>: <span class="number">5</span>,
+  <span class="key">"category"</span>: <span class="string">"all"</span>
+}
+                            </div>
+                        </div>
+                        <div class="api-section">
+                            <h5>Response</h5>
+                            <div class="code-block">
+{
+  <span class="key">"query"</span>: <span class="string">"..."</span>,
+  <span class="key">"results"</span>: {
+    <span class="key">"standard"</span>: {...},
+    <span class="key">"vectorless"</span>: {...},
+    <span class="key">"agentic"</span>: {...}
+  },
+  <span class="key">"comparison"</span>: {
+    <span class="key">"latencies"</span>: {...},
+    <span class="key">"avg_scores"</span>: {...}
+  },
+  <span class="key">"recommendation"</span>: <span class="string">"Use agentic RAG..."</span>
+}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="api-endpoint">
+                    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/api/upload</span>
+                        <span class="api-description">Upload and index documents</span>
+                    </div>
+                    <div class="api-endpoint-body">
+                        <div class="api-section">
+                            <h5>Request (multipart/form-data)</h5>
+                            <div class="code-block">
+<span class="key">files</span>: [File, File, ...]  <span style="color: var(--text-muted);">// PDF, DOCX, TXT, CSV, XLSX</span>
+<span class="key">category</span>: <span class="string">"sam"</span>          <span style="color: var(--text-muted);">// sam, itam, itv, sre</span>
+                            </div>
+                        </div>
+                        <div class="api-section">
+                            <h5>Response</h5>
+                            <div class="code-block">
+{
+  <span class="key">"success"</span>: <span class="boolean">true</span>,
+  <span class="key">"documents_processed"</span>: <span class="number">3</span>,
+  <span class="key">"documents"</span>: [
+    {<span class="key">"id"</span>: <span class="string">"abc123"</span>, <span class="key">"filename"</span>: <span class="string">"doc.pdf"</span>, ...}
+  ]
+}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="api-endpoint">
+                    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                        <span class="api-method get">GET</span>
+                        <span class="api-path">/api/stats</span>
+                        <span class="api-description">Get system statistics</span>
+                    </div>
+                    <div class="api-endpoint-body">
+                        <div class="api-section">
+                            <h5>Response</h5>
+                            <div class="code-block">
+{
+  <span class="key">"engines"</span>: {
+    <span class="key">"standard"</span>: {<span class="key">"status"</span>: <span class="string">"initialized"</span>, ...},
+    <span class="key">"vectorless"</span>: {<span class="key">"status"</span>: <span class="string">"initialized"</span>, ...},
+    <span class="key">"agentic"</span>: {<span class="key">"status"</span>: <span class="string">"initialized"</span>, ...}
+  },
+  <span class="key">"total_documents"</span>: <span class="number">42</span>,
+  <span class="key">"latency_metrics"</span>: {...}
+}
+                            </div>
+                        </div>
+                        <button class="btn btn-primary try-btn" onclick="tryEndpoint('/api/stats', 'GET')">Try It</button>
+                    </div>
+                </div>
+
+                <div class="api-endpoint">
+                    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                        <span class="api-method get">GET</span>
+                        <span class="api-path">/api/metrics</span>
+                        <span class="api-description">Get detailed latency metrics</span>
+                    </div>
+                    <div class="api-endpoint-body">
+                        <div class="api-section">
+                            <h5>Response</h5>
+                            <div class="code-block">
+{
+  <span class="key">"standard_rag.retrieve"</span>: {
+    <span class="key">"count"</span>: <span class="number">15</span>,
+    <span class="key">"avg_ms"</span>: <span class="number">234.5</span>,
+    <span class="key">"p50_ms"</span>: <span class="number">220.0</span>,
+    <span class="key">"p95_ms"</span>: <span class="number">450.0</span>,
+    <span class="key">"p99_ms"</span>: <span class="number">520.0</span>
+  },
+  ...
+}
+                            </div>
+                        </div>
+                        <button class="btn btn-primary try-btn" onclick="tryEndpoint('/api/metrics', 'GET')">Try It</button>
+                    </div>
+                </div>
+
+                <div class="api-endpoint">
+                    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                        <span class="api-method get">GET</span>
+                        <span class="api-path">/api/graph</span>
+                        <span class="api-description">Get document graph structure for visualization</span>
+                    </div>
+                    <div class="api-endpoint-body">
+                        <div class="api-section">
+                            <h5>Response</h5>
+                            <div class="code-block">
+{
+  <span class="key">"nodes"</span>: [
+    {<span class="key">"id"</span>: <span class="string">"doc1"</span>, <span class="key">"label"</span>: <span class="string">"sam_best_practices.txt"</span>, <span class="key">"type"</span>: <span class="string">"document"</span>},
+    {<span class="key">"id"</span>: <span class="string">"sec1"</span>, <span class="key">"label"</span>: <span class="string">"Introduction"</span>, <span class="key">"type"</span>: <span class="string">"section"</span>},
+    ...
+  ],
+  <span class="key">"edges"</span>: [
+    {<span class="key">"from"</span>: <span class="string">"doc1"</span>, <span class="key">"to"</span>: <span class="string">"sec1"</span>},
+    ...
+  ]
+}
+                            </div>
+                        </div>
+                        <button class="btn btn-primary try-btn" onclick="tryEndpoint('/api/graph', 'GET')">Try It</button>
+                    </div>
+                </div>
+
+                <div class="api-endpoint">
+                    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                        <span class="api-method get">GET</span>
+                        <span class="api-path">/health</span>
+                        <span class="api-description">Health check endpoint</span>
+                    </div>
+                    <div class="api-endpoint-body">
+                        <div class="api-section">
+                            <h5>Response</h5>
+                            <div class="code-block">
+{
+  <span class="key">"status"</span>: <span class="string">"healthy"</span>,
+  <span class="key">"version"</span>: <span class="string">"1.0.0"</span>,
+  <span class="key">"engines"</span>: {
+    <span class="key">"standard"</span>: <span class="string">"ready"</span>,
+    <span class="key">"vectorless"</span>: <span class="string">"ready"</span>,
+    <span class="key">"agentic"</span>: <span class="string">"ready"</span>
+  },
+  <span class="key">"aws_region"</span>: <span class="string">"us-east-1"</span>,
+  <span class="key">"model_id"</span>: <span class="string">"us.anthropic.claude-sonnet-4-6"</span>
+}
+                            </div>
+                        </div>
+                        <button class="btn btn-primary try-btn" onclick="tryEndpoint('/health', 'GET')">Try It</button>
+                    </div>
+                </div>
+
+                <div class="api-endpoint">
+                    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                        <span class="api-method delete">DELETE</span>
+                        <span class="api-path">/api/clear</span>
+                        <span class="api-description">Clear all data and reinitialize engines</span>
+                    </div>
+                    <div class="api-endpoint-body">
+                        <div class="api-section">
+                            <h5>Response</h5>
+                            <div class="code-block">
+{
+  <span class="key">"status"</span>: <span class="string">"cleared"</span>,
+  <span class="key">"message"</span>: <span class="string">"All data cleared and engines reinitialized"</span>
+}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div class="modal-overlay" id="uploadModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Upload Documents</h3>
+                <button class="modal-close" id="closeUploadModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-zone-icon">&#128196;</div>
+                    <p class="upload-zone-text">Drag & drop files here</p>
+                    <p class="upload-zone-subtext">or click to browse</p>
+                    <p class="upload-zone-subtext">Supported: PDF, DOCX, TXT, CSV, XLSX</p>
+                </div>
+                <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.txt,.csv,.xlsx,.xls" style="display: none;">
+
+                <div style="margin-top: 1rem;">
+                    <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">
+                        Category
+                    </label>
+                    <select id="uploadCategory" style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 0.875rem;">
+                        <option value="sam">SAM - Software Asset Management</option>
+                        <option value="itam">ITAM - IT Asset Management</option>
+                        <option value="itv">ITV - IT Value</option>
+                        <option value="sre">SRE - Site Reliability Engineering</option>
+                    </select>
+                </div>
+
+                <div id="uploadStatus" style="margin-top: 1rem; text-align: center;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Response Modal -->
+    <div class="modal-overlay" id="apiResponseModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 class="modal-title">API Response</h3>
+                <button class="modal-close" onclick="closeApiModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="code-block" id="apiResponseContent" style="max-height: 400px; overflow-y: auto;">
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/tabs.js"></script>
+</body>
+</html>

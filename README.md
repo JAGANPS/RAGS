@@ -254,7 +254,7 @@ Solution: Stop any other processes using the database, or delete `data/chroma_db
 
 ## License
 
-Internal use - Flexera
+MIT
 
 ## Contributing
 
